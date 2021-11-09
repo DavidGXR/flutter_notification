@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/tzdata.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
@@ -14,7 +15,7 @@ void notificationInitialSetup() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Initialise notification setting for each platform Android & iOS
   const AndroidInitializationSettings initializationSettingsAndroid =
-  AndroidInitializationSettings('InstagramCloneLogo');
+  AndroidInitializationSettings('instagramclonelogo');
 
   final IOSInitializationSettings initializationSettingsIOS =
   IOSInitializationSettings(
@@ -78,14 +79,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void scheduleNotification() async {
     var schedule = DateTime.now().add(Duration(seconds: 10));
-    var time =
+
     var androidPlatformNotificationSetup = AndroidNotificationDetails(
         'alarm_notif',
         'alarm_notif',
         //'Channel for Alarm notification',
-        icon: 'InstagramCloneLogo',
+        icon: 'instagramclonelogo',
         sound: RawResourceAndroidNotificationSound('a_long_cold_sting'),
-        largeIcon: DrawableResourceAndroidBitmap('InstagramCloneLogo'),
+        largeIcon: DrawableResourceAndroidBitmap('instagramclonelogo'),
     );
     var iOSPlatformNotificationSetup = IOSNotificationDetails(
       sound: 'a_long_cold_sting.wav',
@@ -98,8 +99,10 @@ class _MyHomePageState extends State<MyHomePage> {
         0,
         'Instagram',
         "Someone liked your page",
-        schedule,
-        platformChannelSpecifics);
+        tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)),
+        platformChannelSpecifics,
+        androidAllowWhileIdle: true,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime);
   }
 
   @override
@@ -123,7 +126,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
+        onPressed: scheduleNotification,
         tooltip: 'Increment',
         child: const Icon(Icons.add),
       ),
