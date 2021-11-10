@@ -9,46 +9,42 @@ import 'package:flutter_launcher_icons/ios.dart';
 import 'package:flutter_launcher_icons/main.dart';
 import 'package:flutter_launcher_icons/utils.dart';
 import 'package:flutter_launcher_icons/xml_templates.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+// Initialise notification setting for Android
+const AndroidNotificationChannel androidNotificationChannel = AndroidNotificationChannel(
+    'notification_channel_android',
+    'Notification Channel',
+    importance: Importance.high,
+    playSound: true
+);
 
-void main()  {
-  notificationInitialSetup();
-  runApp(const MyApp());
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+// Initialize Firebase app when a notification is receive in the background
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print('Message: ${message.messageId}');
 }
 
-void notificationInitialSetup() async {
-  // Notification
-  WidgetsFlutterBinding.ensureInitialized();
-  // Initialise notification setting for each platform Android & iOS
-  const AndroidInitializationSettings initializationSettingsAndroid =
-  AndroidInitializationSettings('instagramclonelogo');
-
-  final IOSInitializationSettings initializationSettingsIOS =
-  IOSInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-      onDidReceiveLocalNotification: (
-          int id,
-          String? title,
-          String? body,
-          String? payload,
-          ) async {});
+void main() async {
   //
-  final InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  await flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+  ?.createNotificationChannel(androidNotificationChannel);
+
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
   );
-
-  await flutterLocalNotificationsPlugin.initialize(initializationSettings,
-      onSelectNotification: (String? payload) async {
-        if (payload != null) {
-          debugPrint('notification payload: $payload');
-        }
-
-      });
-  //End of notification initialisation
+  //
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -76,11 +72,33 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    // Handle foreground notification
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      RemoteNotification? notification = message.notification;
+      AndroidNotification? android     = message.notification?.android;
+      if (notification != null && android != null) {
+        flutterLocalNotificationsPlugin.show(
+            notification.hashCode,
+            notification.title,
+            notification.body,
+            NotificationDetails(
+              android: AndroidNotificationDetails(
+                androidNotificationChannel.id,
+                androidNotificationChannel.name,
+                channelDescription: androidNotificationChannel.description,
+                color: Colors.blue,
+                playSound: true,
+                icon: 'images/instagramclonelogo.jpg',
+              ),
+            )
+        );
+      }
     });
   }
 
