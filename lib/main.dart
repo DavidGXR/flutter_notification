@@ -2,10 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_launcher_icons/android.dart';
+import 'package:flutter_launcher_icons/constants.dart';
+import 'package:flutter_launcher_icons/custom_exceptions.dart';
+import 'package:flutter_launcher_icons/ios.dart';
+import 'package:flutter_launcher_icons/main.dart';
+import 'package:flutter_launcher_icons/utils.dart';
+import 'package:flutter_launcher_icons/xml_templates.dart';
 
 FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-void main() async {
+void main()  {
   notificationInitialSetup();
   runApp(const MyApp());
 }
@@ -78,11 +85,13 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void scheduleNotification() async {
-    var schedule = DateTime.now().add(Duration(seconds: 10));
+
+    tz.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('Europe/Warsaw'));
 
     var androidPlatformNotificationSetup = AndroidNotificationDetails(
-        'alarm_notif',
-        'alarm_notif',
+        '7997',
+        '7997',
         //'Channel for Alarm notification',
         icon: 'instagramclonelogo',
         sound: RawResourceAndroidNotificationSound('a_long_cold_sting'),
@@ -92,7 +101,7 @@ class _MyHomePageState extends State<MyHomePage> {
       sound: 'a_long_cold_sting.wav',
       presentAlert: true,
       presentBadge: true,
-      presentSound: true
+      presentSound: true,
     );
     var platformChannelSpecifics = NotificationDetails(android: androidPlatformNotificationSetup, iOS: iOSPlatformNotificationSetup);
     await flutterLocalNotificationsPlugin.zonedSchedule(
@@ -112,23 +121,15 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
-        ),
+        child: const Text(
+          'Push blue button below to show local notification after 5 seconds with custom sound.',
+          textAlign: TextAlign.center,
+        )
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: scheduleNotification,
         tooltip: 'Increment',
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.notification_important_outlined),
       ),
     );
   }
