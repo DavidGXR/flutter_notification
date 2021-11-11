@@ -1,5 +1,7 @@
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_notification/pushnotification_service.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_launcher_icons/android.dart';
@@ -12,44 +14,29 @@ import 'package:flutter_launcher_icons/xml_templates.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart';
 
-// Initialise notification setting for Android
-const AndroidNotificationChannel androidNotificationChannel = AndroidNotificationChannel(
-    'notification_channel_android',
-    'Notification Channel',
-    importance: Importance.high,
-    playSound: true
-);
-
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-
-// Initialize Firebase app when a notification is receive in the background
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  print('Message: ${message.messageId}');
-}
 
 void main() async {
-  //
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-  await flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-  ?.createNotificationChannel(androidNotificationChannel);
-
-  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-    alert: true,
-    badge: true,
-    sound: true,
+  AwesomeNotifications().initialize(
+      null,
+      [
+        NotificationChannel(
+            channelKey: 'basic_channel',
+            channelName: 'Basic notifications',
+            channelDescription: 'Notification channel for basic tests',
+            defaultColor: Color(0xFF9D50DD),
+            ledColor: Colors.white
+        )
+      ]
   );
-  //
-  runApp(const MyApp());
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  FirebaseMessaging.onMessage.listen(_firebaseMessagingForegroundHandler);
+
+  runApp(MyApp());
 }
-
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
+  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -57,81 +44,23 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Local Notification'),
+      home: MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
-
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
+  MyHomePage({Key? key, required this.title}) : super(key: key);
   final String title;
-
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  _MyHomePageState createState() => _MyHomePageState();
 }
-
 class _MyHomePageState extends State<MyHomePage> {
-
-
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    // Handle foreground notification
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      RemoteNotification? notification = message.notification;
-      AndroidNotification? android     = message.notification?.android;
-      if (notification != null && android != null) {
-        flutterLocalNotificationsPlugin.show(
-            notification.hashCode,
-            notification.title,
-            notification.body,
-            NotificationDetails(
-              android: AndroidNotificationDetails(
-                androidNotificationChannel.id,
-                androidNotificationChannel.name,
-                channelDescription: androidNotificationChannel.description,
-                color: Colors.blue,
-                playSound: true,
-                icon: 'images/instagramclonelogo.jpg',
-              ),
-            )
-        );
-      }
+  int _counter = 0;
+  void _incrementCounter() {
+    setState(() {
+      _counter++;
     });
   }
-
-  void scheduleNotification() async {
-
-    tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Europe/Warsaw'));
-
-    var androidPlatformNotificationSetup = AndroidNotificationDetails(
-        '7997',
-        '7997',
-        //'Channel for Alarm notification',
-        icon: 'instagramclonelogo',
-        sound: RawResourceAndroidNotificationSound('a_long_cold_sting'),
-        largeIcon: DrawableResourceAndroidBitmap('instagramclonelogo'),
-    );
-    var iOSPlatformNotificationSetup = IOSNotificationDetails(
-      sound: 'a_long_cold_sting.wav',
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-    var platformChannelSpecifics = NotificationDetails(android: androidPlatformNotificationSetup, iOS: iOSPlatformNotificationSetup);
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-        0,
-        'Instagram',
-        "Someone liked your page",
-        tz.TZDateTime.now(tz.local).add(const Duration(seconds: 5)),
-        platformChannelSpecifics,
-        androidAllowWhileIdle: true,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -139,16 +68,25 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        child: const Text(
-          'Push blue button below to show local notification after 5 seconds with custom sound.',
-          textAlign: TextAlign.center,
-        )
+        // Center is a layout widget. It takes a single child and positions it
+        // in the middle of the parent.
+        child:  Text(
+          'Push notification testing using FCM',
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: scheduleNotification,
-        tooltip: 'Increment',
-        child: const Icon(Icons.notification_important_outlined),
-      ),
+
     );
   }
+}
+
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print("Handling a background message: ${message.messageId}");
+  //Show notification
+  AwesomeNotifications().createNotificationFromJsonData(message.data);
+}
+
+Future<void> _firebaseMessagingForegroundHandler(RemoteMessage message) async {
+  print("Handling a background message: ${message.messageId}");
+  //Show notification
+  AwesomeNotifications().createNotificationFromJsonData(message.data);
 }
